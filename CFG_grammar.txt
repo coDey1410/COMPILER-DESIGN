@@ -1,0 +1,42 @@
+=== CFG Grammar ===
+<sql> ::= <statement> ; <sql_tail> 
+<sql_tail> ::= <statement> ; <sql_tail> 
+<sql_tail> ::= EPSILON 
+<statement> ::= <create_table_stmt> 
+<statement> ::= <insert_stmt> 
+<statement> ::= <select_stmt> 
+<create_table_stmt> ::= CREATE TABLE <identifier> ( <column_def_list> , PRIMARY KEY ( <identifier> ) ) 
+<column_def_list> ::= <column_def> <column_def_list_tail> 
+<column_def_list_tail> ::= , <column_def> <column_def_list_tail> 
+<column_def_list_tail> ::= EPSILON 
+<column_def> ::= <identifier> <datatype> 
+<insert_stmt> ::= INSERT INTO <identifier> <opt_identifier_list> VALUES ( <value_list> ) 
+<opt_identifier_list> ::= ( <identifier_list> ) 
+<opt_identifier_list> ::= EPSILON 
+<identifier_list> ::= <identifier> <identifier_list_tail> 
+<identifier_list_tail> ::= , <identifier> <identifier_list_tail> 
+<identifier_list_tail> ::= EPSILON 
+<value_list> ::= <value> <value_list_tail> 
+<value_list_tail> ::= , <value> <value_list_tail> 
+<value_list_tail> ::= EPSILON 
+<select_stmt> ::= SELECT <select_list> FROM <identifier> <opt_where_clause> ; 
+<select_list> ::= * 
+<select_list> ::= <identifier_list> 
+<opt_where_clause> ::= <where_clause> 
+<opt_where_clause> ::= EPSILON 
+<where_clause> ::= WHERE <condition> 
+<condition> ::= <identifier> <comp_operator> <value> 
+<condition> ::= <identifier> BETWEEN <value> AND <value> 
+<condition> ::= <identifier> LIKE <value> 
+<condition> ::= <identifier> IN ( <value_list> ) 
+<comp_operator> ::= = 
+<comp_operator> ::= > 
+<comp_operator> ::= < 
+<identifier> ::= id 
+<datatype> ::= <identifier> 
+<value> ::= <number> 
+<value> ::= <string> 
+<value> ::= <identifier> 
+<number> ::= num 
+<string> ::= str 
+===================

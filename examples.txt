@@ -1,0 +1,29 @@
+-- 1. Create the Students table.
+CREATE TABLE Students (ID INT, Name VARCHAR, PRIMARY KEY (ID));
+
+-- 2. Create the Courses table.
+CREATE TABLE Courses (CourseID INT, CourseName VARCHAR, PRIMARY KEY (CourseID));
+
+-- 3. Insert a student using a column list.
+INSERT INTO Students (ID, Name) VALUES (1, 'Alice');
+
+-- 4. Insert another student without a column list.
+INSERT INTO Students VALUES (2, 'Bob');
+
+-- 5. Insert a course using a column list.
+INSERT INTO Courses (CourseID, CourseName) VALUES (101, 'Mathematics');
+
+-- 6. Insert another course without a column list.
+INSERT INTO Courses VALUES (102, 'Physics');
+
+-- 7. Select all columns from Students.
+SELECT * FROM Students;
+
+-- 8. Select specific columns from Students.
+SELECT ID, Name FROM Students;
+
+-- 9. Select students whose names start with 'A' using LIKE.
+SELECT Name FROM Students WHERE Name LIKE 'A%';
+
+-- 10. Select students with IDs in a given set using IN.
+SELECT ID FROM Students WHERE ID IN (1,2,3);

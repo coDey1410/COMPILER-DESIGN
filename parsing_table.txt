@@ -1,0 +1,101 @@
+=== FIRST Sets ===
+<column_def> : { id }
+<column_def_list> : { id }
+<column_def_list_tail> : { , EPSILON }
+<comp_operator> : { < = > }
+<condition> : { id }
+<create_table_stmt> : { CREATE }
+<datatype> : { id }
+<identifier> : { id }
+<identifier_list> : { id }
+<identifier_list_tail> : { , EPSILON }
+<insert_stmt> : { INSERT }
+<number> : { num }
+<opt_identifier_list> : { ( EPSILON }
+<opt_where_clause> : { EPSILON WHERE }
+<select_list> : { * id }
+<select_stmt> : { SELECT }
+<sql> : { CREATE INSERT SELECT }
+<sql_tail> : { CREATE EPSILON INSERT SELECT }
+<statement> : { CREATE INSERT SELECT }
+<string> : { str }
+<value> : { id num str }
+<value_list> : { id num str }
+<value_list_tail> : { , EPSILON }
+<where_clause> : { WHERE }
+EPSILON : { EPSILON }
+
+=== FOLLOW Sets ===
+<column_def> : { , }
+<column_def_list> : { , }
+<column_def_list_tail> : { , }
+<comp_operator> : { id num str }
+<condition> : { ; }
+<create_table_stmt> : { ; }
+<datatype> : { , }
+<identifier> : { ( ) , ; < = > AND BETWEEN FROM IN LIKE VALUES WHERE id }
+<identifier_list> : { ) FROM }
+<identifier_list_tail> : { ) FROM }
+<insert_stmt> : { ; }
+<number> : { ) , ; AND }
+<opt_identifier_list> : { VALUES }
+<opt_where_clause> : { ; }
+<select_list> : { FROM }
+<select_stmt> : { ; }
+<sql> : { $ }
+<sql_tail> : { $ }
+<statement> : { ; }
+<string> : { ) , ; AND }
+<value> : { ) , ; AND }
+<value_list> : { ) }
+<value_list_tail> : { ) }
+<where_clause> : { ; }
+
+=== Parsing Table ===
+M[<column_def>, id] = <column_def> -> <identifier> <datatype> 
+M[<column_def_list>, id] = <column_def_list> -> <column_def> <column_def_list_tail> 
+M[<column_def_list_tail>, ,] = <column_def_list_tail> -> , <column_def> <column_def_list_tail> 
+<column_def_list_tail> -> EPSILON 
+M[<comp_operator>, <] = <comp_operator> -> < 
+M[<comp_operator>, =] = <comp_operator> -> = 
+M[<comp_operator>, >] = <comp_operator> -> > 
+M[<condition>, id] = <condition> -> <identifier> <comp_operator> <value> 
+<condition> -> <identifier> BETWEEN <value> AND <value> 
+<condition> -> <identifier> LIKE <value> 
+<condition> -> <identifier> IN ( <value_list> ) 
+M[<create_table_stmt>, CREATE] = <create_table_stmt> -> CREATE TABLE <identifier> ( <column_def_list> , PRIMARY KEY ( <identifier> ) ) 
+M[<datatype>, id] = <datatype> -> <identifier> 
+M[<identifier>, id] = <identifier> -> id 
+M[<identifier_list>, id] = <identifier_list> -> <identifier> <identifier_list_tail> 
+M[<identifier_list_tail>, )] = <identifier_list_tail> -> EPSILON 
+M[<identifier_list_tail>, ,] = <identifier_list_tail> -> , <identifier> <identifier_list_tail> 
+M[<identifier_list_tail>, FROM] = <identifier_list_tail> -> EPSILON 
+M[<insert_stmt>, INSERT] = <insert_stmt> -> INSERT INTO <identifier> <opt_identifier_list> VALUES ( <value_list> ) 
+M[<number>, num] = <number> -> num 
+M[<opt_identifier_list>, (] = <opt_identifier_list> -> ( <identifier_list> ) 
+M[<opt_identifier_list>, VALUES] = <opt_identifier_list> -> EPSILON 
+M[<opt_where_clause>, ;] = <opt_where_clause> -> EPSILON 
+M[<opt_where_clause>, WHERE] = <opt_where_clause> -> <where_clause> 
+M[<select_list>, *] = <select_list> -> * 
+M[<select_list>, id] = <select_list> -> <identifier_list> 
+M[<select_stmt>, SELECT] = <select_stmt> -> SELECT <select_list> FROM <identifier> <opt_where_clause> ; 
+M[<sql>, CREATE] = <sql> -> <statement> ; <sql_tail> 
+M[<sql>, INSERT] = <sql> -> <statement> ; <sql_tail> 
+M[<sql>, SELECT] = <sql> -> <statement> ; <sql_tail> 
+M[<sql_tail>, $] = <sql_tail> -> EPSILON 
+M[<sql_tail>, CREATE] = <sql_tail> -> <statement> ; <sql_tail> 
+M[<sql_tail>, INSERT] = <sql_tail> -> <statement> ; <sql_tail> 
+M[<sql_tail>, SELECT] = <sql_tail> -> <statement> ; <sql_tail> 
+M[<statement>, CREATE] = <statement> -> <create_table_stmt> 
+M[<statement>, INSERT] = <statement> -> <insert_stmt> 
+M[<statement>, SELECT] = <statement> -> <select_stmt> 
+M[<string>, str] = <string> -> str 
+M[<value>, id] = <value> -> <identifier> 
+M[<value>, num] = <value> -> <number> 
+M[<value>, str] = <value> -> <string> 
+M[<value_list>, id] = <value_list> -> <value> <value_list_tail> 
+M[<value_list>, num] = <value_list> -> <value> <value_list_tail> 
+M[<value_list>, str] = <value_list> -> <value> <value_list_tail> 
+M[<value_list_tail>, )] = <value_list_tail> -> EPSILON 
+M[<value_list_tail>, ,] = <value_list_tail> -> , <value> <value_list_tail> 
+M[<where_clause>, WHERE] = <where_clause> -> WHERE <condition> 

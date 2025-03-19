@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "*.utsav": "plaintext",
+    "vector": "cpp"
+  }
+}

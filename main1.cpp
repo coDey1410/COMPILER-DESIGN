@@ -28,7 +28,6 @@ bool isNonTerminal(const string &s) {
 }
 
 // Build the grammar (an LL(1) version) as a vector of productions.
-// Note: Some EBNF constructs have been expanded into additional nonterminals.
 vector<Production> buildGrammar() {
     vector<Production> grammar;
     // 1. <sql> -> <statement> ";" <sql_tail>
@@ -161,12 +160,9 @@ map<string, set<string>> computeFirstSets(const vector<Production>& grammar) {
         changed = false;
         for (const auto &prod : grammar) {
             const string &A = prod.lhs;
-            // Compute FIRST(alpha) for production A -> alpha
             set<string> firstAlpha;
             bool allEpsilon = true;
             for (const auto &sym : prod.rhs) {
-                // If sym is a terminal, then FIRST(sym) = {sym}.
-                // Otherwise, it's a nonterminal.
                 for (const auto &item : first[sym]) {
                     if (item != EPSILON)
                         firstAlpha.insert(item);
@@ -179,7 +175,6 @@ map<string, set<string>> computeFirstSets(const vector<Production>& grammar) {
             if (allEpsilon)
                 firstAlpha.insert(EPSILON);
             
-            // Add FIRST(alpha) to FIRST(A)
             size_t before = first[A].size();
             first[A].insert(firstAlpha.begin(), firstAlpha.end());
             if (first[A].size() != before)
@@ -193,7 +188,6 @@ map<string, set<string>> computeFirstSets(const vector<Production>& grammar) {
 map<string, set<string>> computeFollowSets(const vector<Production>& grammar, const map<string, set<string>> &first) {
     map<string, set<string>> follow;
     
-    // Initialize FOLLOW for each nonterminal
     for (const auto &prod : grammar) {
         if (isNonTerminal(prod.lhs))
             follow[prod.lhs]; // default empty set
@@ -211,7 +205,6 @@ map<string, set<string>> computeFollowSets(const vector<Production>& grammar, co
                 string B = prod.rhs[i];
                 if (isNonTerminal(B)) {
                     size_t before = follow[B].size();
-                    // Compute FIRST(beta)
                     bool betaAllEpsilon = true;
                     for (size_t j = i + 1; j < prod.rhs.size(); j++) {
                         const string &betaSym = prod.rhs[j];
@@ -225,7 +218,6 @@ map<string, set<string>> computeFollowSets(const vector<Production>& grammar, co
                         }
                     }
                     if (betaAllEpsilon) {
-                        // Add FOLLOW(A) to FOLLOW(B)
                         follow[B].insert(follow[A].begin(), follow[A].end());
                     }
                     if (follow[B].size() != before)
@@ -238,14 +230,13 @@ map<string, set<string>> computeFollowSets(const vector<Production>& grammar, co
 }
 
 // Construct the LL(1) parsing table.
-// The table maps (nonterminal, terminal) pairs to a vector of production indices (for conflicts).
+// The table maps (nonterminal, terminal) pairs to a vector of production indices.
 map<pair<string, string>, vector<int>> constructParsingTable(const vector<Production>& grammar,
                                                               const map<string, set<string>> &first,
                                                               const map<string, set<string>> &follow) {
     map<pair<string, string>, vector<int>> table;
     for (int i = 0; i < grammar.size(); i++) {
         const Production &prod = grammar[i];
-        // Compute FIRST(alpha) for production prod: A -> alpha.
         set<string> firstAlpha;
         bool allEpsilon = true;
         for (const auto &sym : prod.rhs) {
@@ -261,13 +252,11 @@ map<pair<string, string>, vector<int>> constructParsingTable(const vector<Produc
         if (allEpsilon)
             firstAlpha.insert(EPSILON);
         
-        // For each terminal 'a' in FIRST(alpha), add production i to table[A, a]
         for (const auto &term : firstAlpha) {
             if (term != EPSILON) {
                 table[{prod.lhs, term}].push_back(i);
             }
         }
-        // If EPSILON is in FIRST(alpha), add production i to table[A, b] for every b in FOLLOW(A)
         if (firstAlpha.find(EPSILON) != firstAlpha.end()) {
             for (const auto &b : follow.at(prod.lhs)) {
                 table[{prod.lhs, b}].push_back(i);
@@ -291,7 +280,7 @@ void writeParsingInfoToFile(const vector<Production>& grammar,
     ofs << "=== FIRST Sets ===\n";
     for (const auto &p : first) {
         if (!isNonTerminal(p.first) && p.first != EPSILON)
-            continue; // Print FIRST only for nonterminals.
+            continue;
         ofs << p.first << " : { ";
         for (const auto &sym : p.second)
             ofs << sym << " ";
@@ -312,7 +301,6 @@ void writeParsingInfoToFile(const vector<Production>& grammar,
         const auto &prodIndices = entry.second;
         ofs << "M[" << key.first << ", " << key.second << "] = ";
         for (int idx : prodIndices) {
-            // Print the production in the form: A -> alpha
             const Production &prod = grammar[idx];
             ofs << prod.lhs << " -> ";
             for (const auto &sym : prod.rhs)
@@ -326,7 +314,7 @@ void writeParsingInfoToFile(const vector<Production>& grammar,
 }
 
 // ===========================
-// Part 3: Lexer, Parser, and Parse Tree (as before)
+// Part 3: Lexer, LL(1) Parser Using Parsing Table, and Parse Tree Generation
 // ===========================
 
 // --- Token Definitions for SQL ---
@@ -447,278 +435,78 @@ private:
     }
 };
 
-// --- Parse Tree Node Definition ---
-struct Node {
-    string label;
-    vector<Node*> children;
-};
+// --- LL(1) Parser Using Parsing Table ---
+// This function implements the standard LL(1) parsing algorithm using a stack and the parsing table.
+void ll1Parse(const vector<Token>& tokens, const vector<Production>& grammar,
+              const map<pair<string, string>, vector<int>> &parsingTable) {
+    // Use a stack of strings representing grammar symbols.
+    // Initialize the stack with "$" (end-marker) and the start symbol.
+    vector<string> stack;
+    stack.push_back("$");
+    stack.push_back("<sql>");
+    
+    int i = 0;  // index into tokens
 
-Node* newNode(const string &label) {
-    Node* node = new Node();
-    node->label = label;
-    return node;
-}
-
-// Helper to print a token as a terminal node.
-string tokenName(TokenType t) {
-    switch(t) {
-        case TokenType::CREATE: return "CREATE";
-        case TokenType::TABLE: return "TABLE";
-        case TokenType::PRIMARY: return "PRIMARY";
-        case TokenType::KEY: return "KEY";
-        case TokenType::INSERT: return "INSERT";
-        case TokenType::INTO: return "INTO";
-        case TokenType::VALUES: return "VALUES";
-        case TokenType::SELECT: return "SELECT";
-        case TokenType::FROM: return "FROM";
-        case TokenType::WHERE: return "WHERE";
-        case TokenType::BETWEEN: return "BETWEEN";
-        case TokenType::AND: return "AND";
-        case TokenType::LIKE: return "LIKE";
-        case TokenType::IN: return "IN";
-        case TokenType::LPAREN: return "(";
-        case TokenType::RPAREN: return ")";
-        case TokenType::COMMA: return ",";
-        case TokenType::SEMICOLON: return ";";
-        case TokenType::ASTERISK: return "*";
-        case TokenType::EQUAL: return "=";
-        case TokenType::GREATER: return ">";
-        case TokenType::LESS: return "<";
-        case TokenType::IDENTIFIER: return "IDENTIFIER";
-        case TokenType::NUMBER: return "NUMBER";
-        case TokenType::STRING: return "STRING";
-        case TokenType::END: return "END";
-        default: return "UNKNOWN";
-    }
-}
-
-// --- Recursive Descent Parser with Parse Tree Generation ---
-class Parser {
-public:
-    Parser(const vector<Token>& tokens) : tokens(tokens), pos(0) {}
-    Node* parse() {
-        return parseSql();
-    }
-private:
-    vector<Token> tokens;
-    size_t pos;
-    Token peek() { return pos < tokens.size() ? tokens[pos] : Token{TokenType::END, ""}; }
-    Token advance() { return pos < tokens.size() ? tokens[pos++] : Token{TokenType::END, ""}; }
-    bool match(TokenType expected) {
-        if (peek().type==expected) { advance(); return true; }
-        return false;
-    }
-    void error(const string &msg) {
-        cerr << "Syntax Error: " << msg << " at token '" << peek().lexeme << "'" << endl;
-        exit(1);
-    }
-    Token expect(TokenType expected) {
-        if (peek().type==expected)
-            return advance();
-        error("Expected " + tokenName(expected));
-        return Token{TokenType::END, ""}; // unreachable
-    }
-    Node* terminal(Token token) {
-        return newNode("[" + tokenName(token.type) + ": " + token.lexeme + "]");
-    }
-    // Grammar parsing functions (matching the earlier recursive descent design)
-    Node* parseSql() {
-        Node* node = newNode("<sql>");
-        while (peek().type != TokenType::END) {
-            Node* stmt = parseStatement();
-            node->children.push_back(stmt);
+    while (!stack.empty()) {
+        string top = stack.back();
+        // Determine the current input symbol.
+        string inputSymbol;
+        if (tokens[i].type == TokenType::END)
+            inputSymbol = "$";
+        else {
+            // For tokens corresponding to placeholders, map to our grammar terminals.
+            switch (tokens[i].type) {
+                case TokenType::IDENTIFIER: inputSymbol = "id"; break;
+                case TokenType::NUMBER: inputSymbol = "num"; break;
+                case TokenType::STRING: inputSymbol = "str"; break;
+                default: inputSymbol = tokens[i].lexeme; break;
+            }
         }
-        return node;
+        
+        // If top of stack is a terminal or the end marker.
+        if (top == "$" || !isNonTerminal(top)) {
+            if (top == inputSymbol) {
+                stack.pop_back();
+                i++;
+            } else {
+                cerr << "Syntax Error: expected '" << top << "' but found '" << inputSymbol << "'" << endl;
+                return;
+            }
+        } else {
+            // Top is a nonterminal; look up the parsing table entry.
+            pair<string, string> key = {top, inputSymbol};
+            if (parsingTable.find(key) == parsingTable.end()) {
+                cerr << "Syntax Error: no rule for (" << top << ", " << inputSymbol << ")" << endl;
+                return;
+            }
+            vector<int> prodIndices = parsingTable.at(key);
+            if (prodIndices.size() != 1) {
+                cerr << "Syntax Error: conflict in parsing table for (" << top << ", " << inputSymbol << ")" << endl;
+                return;
+            }
+            int prodIndex = prodIndices[0];
+            Production prod = grammar[prodIndex];
+            // Pop the nonterminal.
+            stack.pop_back();
+            // If production is EPSILON, do nothing; otherwise push RHS in reverse.
+            if (!(prod.rhs.size() == 1 && prod.rhs[0] == EPSILON)) {
+                for (int j = prod.rhs.size() - 1; j >= 0; j--) {
+                    stack.push_back(prod.rhs[j]);
+                }
+            }
+        }
     }
     
-    
-    Node* parseSqlTail() {
-        Node* node = newNode("<sql_tail>");
-        if (peek().type == TokenType::END) {
-            node->children.push_back(newNode(EPSILON));
-            return node;
-        }
-        // Lookahead: if next tokens can start a statement, parse tail.
-        if (peek().type==TokenType::CREATE || peek().type==TokenType::INSERT || peek().type==TokenType::SELECT) {
-            Node* stmt = parseStatement();
-            node->children.push_back(stmt);
-            Token t = expect(TokenType::SEMICOLON); // Changed from expect(';')
-            node->children.push_back(terminal(t));
-            Node* tail = parseSqlTail();
-            node->children.push_back(tail);
-        } else {
-            node->children.push_back(newNode(EPSILON));
-        }
-        return node;
+    if (i != tokens.size()) {
+        cerr << "Syntax Error: input not fully consumed." << endl;
+        return;
     }
-        Node* parseStatement() {
-        Node* node = newNode("<statement>");
-        Token current = peek();
-        if (current.type==TokenType::CREATE)
-            node->children.push_back(parseCreateTable());
-        else if (current.type==TokenType::INSERT)
-            node->children.push_back(parseInsert());
-        else if (current.type==TokenType::SELECT)
-            node->children.push_back(parseSelect());
-        else
-            error("Expected CREATE, INSERT, or SELECT");
-        return node;
-    }
-    Node* parseCreateTable() {
-        Node* node = newNode("<create_table_stmt>");
-        Token t = expect(TokenType::CREATE); node->children.push_back(terminal(t));
-        t = expect(TokenType::TABLE); node->children.push_back(terminal(t));
-        t = expect(TokenType::IDENTIFIER); node->children.push_back(terminal(t));
-        t = expect(TokenType::LPAREN); node->children.push_back(terminal(t));
-        node->children.push_back(parseColumnDefList());
-        t = expect(TokenType::COMMA); node->children.push_back(terminal(t));
-        t = expect(TokenType::PRIMARY); node->children.push_back(terminal(t));
-        t = expect(TokenType::KEY); node->children.push_back(terminal(t));
-        t = expect(TokenType::LPAREN); node->children.push_back(terminal(t));
-        t = expect(TokenType::IDENTIFIER); node->children.push_back(terminal(t));
-        t = expect(TokenType::RPAREN); node->children.push_back(terminal(t));
-        t = expect(TokenType::RPAREN); node->children.push_back(terminal(t));
-        t = expect(TokenType::SEMICOLON); node->children.push_back(terminal(t));
-        return node;
-    }
-    Node* parseColumnDefList() {
-        Node* node = newNode("<column_def_list>");
-        node->children.push_back(parseColumnDef());
-        while (peek().type==TokenType::COMMA) {
-            // Stop if next is PRIMARY (for PRIMARY KEY clause)
-            if (tokens.size() > pos+1 && tokens[pos+1].type==TokenType::PRIMARY)
-                break;
-            Token comma = expect(TokenType::COMMA);
-            node->children.push_back(terminal(comma));
-            node->children.push_back(parseColumnDef());
-        }
-        return node;
-    }
-    Node* parseColumnDef() {
-        Node* node = newNode("<column_def>");
-        Token t = expect(TokenType::IDENTIFIER); node->children.push_back(terminal(t));
-        t = expect(TokenType::IDENTIFIER); node->children.push_back(terminal(t));
-        return node;
-    }
-    Node* parseInsert() {
-        Node* node = newNode("<insert_stmt>");
-        Token t = expect(TokenType::INSERT); node->children.push_back(terminal(t));
-        t = expect(TokenType::INTO); node->children.push_back(terminal(t));
-        t = expect(TokenType::IDENTIFIER); node->children.push_back(terminal(t));
-        // Optional identifier list
-        node->children.push_back(parseOptIdentifierList());
-        t = expect(TokenType::VALUES); node->children.push_back(terminal(t));
-        t = expect(TokenType::LPAREN); node->children.push_back(terminal(t));
-        node->children.push_back(parseValueList());
-        t = expect(TokenType::RPAREN); node->children.push_back(terminal(t));
-        t = expect(TokenType::SEMICOLON); node->children.push_back(terminal(t));
-        return node;
-    }
-    Node* parseOptIdentifierList() {
-        Node* node = newNode("<opt_identifier_list>");
-        if (peek().type==TokenType::LPAREN) {
-            Token t = expect(TokenType::LPAREN); node->children.push_back(terminal(t));
-            node->children.push_back(parseIdentifierList());
-            t = expect(TokenType::RPAREN); node->children.push_back(terminal(t));
-        } else {
-            node->children.push_back(newNode(EPSILON));
-        }
-        return node;
-    }
-    Node* parseIdentifierList() {
-        Node* node = newNode("<identifier_list>");
-        Token t = expect(TokenType::IDENTIFIER); node->children.push_back(terminal(t));
-        while (peek().type==TokenType::COMMA) {
-            t = expect(TokenType::COMMA); node->children.push_back(terminal(t));
-            t = expect(TokenType::IDENTIFIER); node->children.push_back(terminal(t));
-        }
-        return node;
-    }
-    Node* parseValueList() {
-        Node* node = newNode("<value_list>");
-        node->children.push_back(parseValue());
-        while (peek().type==TokenType::COMMA) {
-            Token t = expect(TokenType::COMMA); node->children.push_back(terminal(t));
-            node->children.push_back(parseValue());
-        }
-        return node;
-    }
-    Node* parseValue() {
-        Node* node = newNode("<value>");
-        Token t = peek();
-        if (t.type==TokenType::NUMBER || t.type==TokenType::STRING || t.type==TokenType::IDENTIFIER)
-            node->children.push_back(terminal(advance()));
-        else
-            error("Expected value");
-        return node;
-    }
-    Node* parseSelect() {
-        Node* node = newNode("<select_stmt>");
-        Token t = expect(TokenType::SELECT); node->children.push_back(terminal(t));
-        node->children.push_back(parseSelectList());
-        t = expect(TokenType::FROM); node->children.push_back(terminal(t));
-        t = expect(TokenType::IDENTIFIER); node->children.push_back(terminal(t));
-        node->children.push_back(parseOptWhereClause());
-        t = expect(TokenType::SEMICOLON); node->children.push_back(terminal(t));
-        return node;
-    }
-    Node* parseSelectList() {
-        Node* node = newNode("<select_list>");
-        if (peek().type==TokenType::ASTERISK) {
-            Token t = expect(TokenType::ASTERISK); node->children.push_back(terminal(t));
-        } else {
-            node->children.push_back(parseIdentifierList());
-        }
-        return node;
-    }
-    Node* parseOptWhereClause() {
-        Node* node = newNode("<opt_where_clause>");
-        if (peek().type==TokenType::WHERE) {
-            Token t = expect(TokenType::WHERE); node->children.push_back(terminal(t));
-            node->children.push_back(parseCondition());
-        } else {
-            node->children.push_back(newNode(EPSILON));
-        }
-        return node;
-    }
-    Node* parseCondition() {
-        Node* node = newNode("<condition>");
-        Token t = expect(TokenType::IDENTIFIER); node->children.push_back(terminal(t));
-        t = peek();
-        if (t.type==TokenType::EQUAL || t.type==TokenType::GREATER || t.type==TokenType::LESS) {
-            t = advance(); node->children.push_back(terminal(t));
-            node->children.push_back(parseValue());
-        } else if (t.type==TokenType::BETWEEN) {
-            t = advance(); node->children.push_back(terminal(t));
-            node->children.push_back(parseValue());
-            t = expect(TokenType::AND); node->children.push_back(terminal(t));
-            node->children.push_back(parseValue());
-        } else if (t.type==TokenType::LIKE) {
-            t = advance(); node->children.push_back(terminal(t));
-            node->children.push_back(parseValue());
-        } else if (t.type==TokenType::IN) {
-            t = advance(); node->children.push_back(terminal(t));
-            t = expect(TokenType::LPAREN); node->children.push_back(terminal(t));
-            node->children.push_back(parseValueList());
-            t = expect(TokenType::RPAREN); node->children.push_back(terminal(t));
-        } else {
-            error("Expected operator in condition");
-        }
-        return node;
-    }
-};
-
-// Pre-order traversal to print the parse tree.
-void printParseTree(Node* root, int indent = 0) {
-    for (int i = 0; i < indent; i++) cout << "  ";
-    cout << root->label << "\n";
-    for (auto child : root->children)
-        printParseTree(child, indent + 1);
+    cout << "Parsing successful: Input is syntactically correct according to the LL(1) grammar." << endl;
 }
 
-
-// This function generates a text file containing the CFG derivation (parse tree) for the query.
-// Function to generate a text file containing the CFG grammar.
+// ===========================
+// Utility Function to Write CFG Grammar to File
+// ===========================
 void generateCFGGrammarFile(const vector<Production>& grammar, const string &filename) {
     ofstream ofs(filename);
     if (!ofs) {
@@ -781,18 +569,10 @@ int main() {
     
     cout << "\n=== Token Table ===" << endl;
     for (const auto &tok : tokens) {
-        cout << tokenName(tok.type) << "\t" << tok.lexeme << endl;
+        // For display purposes, print the token lexeme.
+        cout << tok.lexeme << "\t(" << static_cast<int>(tok.type) << ")" << endl;
     }
     cout << "===================\n\n";
-    
-    // Parsing and Parse Tree Generation
-    Parser parser(tokens);
-    Node* parseTree = parser.parse();
-    //generateCFGDerivationFile(parseTree, "cfg_derivation.txt");
-
-    cout << "\n=== Parse Tree ===" << endl;
-    printParseTree(parseTree);
-    cout << "==================\n\n";
     
     // Build Grammar and compute FIRST, FOLLOW, and Parsing Table
     vector<Production> grammar = buildGrammar();
@@ -800,9 +580,12 @@ int main() {
     auto first = computeFirstSets(grammar);
     auto follow = computeFollowSets(grammar, first);
     auto parsingTable = constructParsingTable(grammar, first, follow);
-    
-    // Write the results to a text file.
     writeParsingInfoToFile(grammar, first, follow, parsingTable);
+    
+    // Syntax Analysis using LL(1) Parsing Table
+    cout << "\n=== LL(1) Parsing (Using Parsing Table) ===" << endl;
+    ll1Parse(tokens, grammar, parsingTable);
+    cout << "=============================================" << endl;
     
     return 0;
 }
