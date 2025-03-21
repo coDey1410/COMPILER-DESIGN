@@ -1,25 +1,15 @@
 #ifndef LEXER_H
 #define LEXER_H
-
+#include "token.h"  
 #include <string>
 #include <vector>
 using namespace std;
 
-// Token types for SQL.
-enum class TokenType {
-    CREATE, TABLE, PRIMARY, KEY, INSERT, INTO, VALUES, SELECT, FROM, WHERE,
-    BETWEEN, AND, LIKE, IN,
-    LPAREN, RPAREN, COMMA, SEMICOLON, ASTERISK,
-    EQUAL, GREATER, LESS,
-    IDENTIFIER, NUMBER, STRING,
-    END
-};
+
+
 
 // Token structure: type and lexeme.
-struct Token {
-    TokenType type;
-    string lexeme;
-};
+
 
 class Lexer {
 public:

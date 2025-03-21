@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "grammar.h"
+#include "token.h"
 #include "lexer.h"
 #include "parser.h"
 #include "utils.h"
@@ -46,7 +47,7 @@ int main() {
     
     cout << "\n=== Token Table ===" << endl;
     for (const auto &tok : tokens) {
-        cout << tok.lexeme << "\t(" << static_cast<int>(tok.type) << ")" << endl;
+        cout << tok.lexeme << "\t(" << tokenName(tok.type) << ")" << endl;
     }
     cout << "===================\n\n";
     

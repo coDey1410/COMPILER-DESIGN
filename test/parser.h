@@ -3,6 +3,7 @@
 
 #include "grammar.h"
 #include "lexer.h"
+#include "token.h"
 #include <vector>
 #include <map>
 #include <string>
