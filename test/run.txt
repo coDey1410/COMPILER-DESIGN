@@ -1,0 +1,2 @@
+ g++ -std=c++17 main.cpp grammar.cpp lexer.cpp parser.cpp utils.cpp -o sql_parser
+ ./sql_parser

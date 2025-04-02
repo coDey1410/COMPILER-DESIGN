@@ -94,15 +94,22 @@ vector<Production> buildGrammar() {
     // 26. <where_clause> -> "WHERE" <condition>
     grammar.push_back({"<where_clause>", {"WHERE", "<condition>"}});
     
-    // 27. <condition> -> <identifier> <comp_operator> <value>
-    grammar.push_back({"<condition>", {"<identifier>", "<comp_operator>", "<value>"}});
-    // 28. <condition> -> <identifier> "BETWEEN" <value> "AND" <value>
-    grammar.push_back({"<condition>", {"<identifier>", "BETWEEN", "<value>", "AND", "<value>"}});
-    // 29. <condition> -> <identifier> "LIKE" <value>
-    grammar.push_back({"<condition>", {"<identifier>", "LIKE", "<value>"}});
-    // 30. <condition> -> <identifier> "IN" "(" <value_list> ")"
-    grammar.push_back({"<condition>", {"<identifier>", "IN", "(", "<value_list>", ")"}});
-    
+    // New production: <condition> -> <identifier> <condition_tail>
+grammar.push_back({"<condition>", {"<identifier>", "<condition_tail>"}});
+
+// Define <condition_tail> alternatives:
+// <condition_tail> -> <comp_operator> <value>
+grammar.push_back({"<condition_tail>", {"<comp_operator>", "<value>"}});
+
+// <condition_tail> -> BETWEEN <value> AND <value>
+grammar.push_back({"<condition_tail>", {"BETWEEN", "<value>", "AND", "<value>"}});
+
+// <condition_tail> -> LIKE <value>
+grammar.push_back({"<condition_tail>", {"LIKE", "<value>"}});
+
+// <condition_tail> -> IN "(" <value_list> ")"
+grammar.push_back({"<condition_tail>", {"IN", "(", "<value_list>", ")"}});
+
     // 31. <comp_operator> -> "="
     grammar.push_back({"<comp_operator>", {"="}});
     // 32. <comp_operator> -> ">"

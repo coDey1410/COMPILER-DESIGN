@@ -25,7 +25,7 @@ int main() {
 <condition>    ::= <identifier> <comp_operator> <value>
                 |  <identifier> "BETWEEN" <value> "AND" <value>
                 |  <identifier> "LIKE" <value>
-                |  <identifier> "IN" "(" <value_list> ")"
+                |  "IN" "(" <value_list> ")"
 <comp_operator>  ::= "=" | ">" | "<"
 <identifier>   ::= id
 <datatype>     ::= <identifier>
@@ -58,7 +58,7 @@ int main() {
     auto follow = computeFollowSets(grammar, first);
     auto parsingTable = constructParsingTable(grammar, first, follow);
     writeParsingInfoToFile(grammar, first, follow, parsingTable);
-    
+    generateSymbolTableFile(tokens,"symtab.txt");
     // Perform syntax analysis using the LL(1) parsing table.
     cout << "\n=== LL(1) Parsing (Using Parsing Table) ===" << endl;
     ll1Parse(tokens, grammar, parsingTable);

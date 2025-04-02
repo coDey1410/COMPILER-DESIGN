@@ -1,0 +1,23 @@
+=== Symbol Table ===
+
+--- Identifiers ---
+Students	(IDENTIFIER)
+
+--- Numbers ---
+2	(NUMBER)
+
+--- String Literals ---
+Bob	(STRING)
+
+--- Keywords ---
+INTO	(INTO)
+VALUES	(VALUES)
+INSERT	(INSERT)
+
+--- Symbols ---
+;	(;)
+)	())
+,	(,)
+(	(()
+
+=====================
