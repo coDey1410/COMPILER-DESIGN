@@ -20,19 +20,21 @@ vector<Production> buildGrammar() {
     // 6. <statement> -> <select_stmt>
     grammar.push_back({"<statement>", {"<select_stmt>"}});
     
-    // 7. <create_table_stmt> -> "CREATE" "TABLE" <identifier> "(" <column_def_list> "," "PRIMARY" "KEY" "(" <identifier> ")" ")"
-    grammar.push_back({"<create_table_stmt>", {"CREATE", "TABLE", "<identifier>", "(", "<column_def_list>", ",", "PRIMARY", "KEY", "(", "<identifier>", ")", ")"}});
-    
-    // 8. <column_def_list> -> <column_def> <column_def_list_tail>
-    grammar.push_back({"<column_def_list>", {"<column_def>", "<column_def_list_tail>"}});
-    // 9. <column_def_list_tail> -> "," <column_def> <column_def_list_tail>
-    grammar.push_back({"<column_def_list_tail>", {",", "<column_def>", "<column_def_list_tail>"}});
-    // 10. <column_def_list_tail> -> EPSILON
-    grammar.push_back({"<column_def_list_tail>", {EPSILON}});
-    
-    // 11. <column_def> -> <identifier> <datatype>
-    grammar.push_back({"<column_def>", {"<identifier>", "<datatype>"}});
-    
+    // 7. <create_table_stmt> -> "CREATE" "TABLE" <identifier> "(" <column_def_list> ")" <opt_table_constraint>
+grammar.push_back({"<create_table_stmt>", {"CREATE", "TABLE", "<identifier>", "(", "<column_def_list>", ")"}});
+
+// 8. <column_def_list> -> <column_def> <column_def_list_tail>
+grammar.push_back({"<column_def_list>", {"<column_def>", "<column_def_list_tail>"}});
+// 9. <column_def_list_tail> -> "," <column_def> <column_def_list_tail>
+grammar.push_back({"<column_def_list_tail>", {",", "<column_def>", "<column_def_list_tail>"}});
+// 10. <column_def_list_tail> -> EPSILON
+grammar.push_back({"<column_def_list_tail>", {EPSILON}});
+
+// 11. <column_def> -> <identifier> <datatype>
+grammar.push_back({"<column_def>", {"<identifier>", "<datatype>"}});
+
+grammar.push_back({"<column_def>", {"PRIMARY", "KEY", "(", "<identifier>", ")"}});
+
     // 12. <insert_stmt> -> "INSERT" "INTO" <identifier> <opt_identifier_list> "VALUES" "(" <value_list> ")"
     grammar.push_back({"<insert_stmt>", {"INSERT", "INTO", "<identifier>", "<opt_identifier_list>", "VALUES", "(", "<value_list>", ")"}});
     // 13. <opt_identifier_list> -> "(" <identifier_list> ")"
@@ -70,15 +72,22 @@ vector<Production> buildGrammar() {
     // 26. <where_clause> -> "WHERE" <condition>
     grammar.push_back({"<where_clause>", {"WHERE", "<condition>"}});
     
-    // 27. <condition> -> <identifier> <comp_operator> <value>
-    grammar.push_back({"<condition>", {"<identifier>", "<comp_operator>", "<value>"}});
-    // 28. <condition> -> <identifier> "BETWEEN" <value> "AND" <value>
-    grammar.push_back({"<condition>", {"<identifier>", "BETWEEN", "<value>", "AND", "<value>"}});
-    // 29. <condition> -> <identifier> "LIKE" <value>
-    grammar.push_back({"<condition>", {"<identifier>", "LIKE", "<value>"}});
-    // 30. <condition> -> <identifier> "IN" "(" <value_list> ")"
-    grammar.push_back({"<condition>", {"<identifier>", "IN", "(", "<value_list>", ")"}});
-    
+    // New production for <condition> that factors out the common <identifier>
+grammar.push_back({"<condition>", {"<identifier>", "<condition_tail>"}});
+
+// Define <condition_tail> alternatives:
+// <condition_tail> -> <comp_operator> <value>
+grammar.push_back({"<condition_tail>", {"<comp_operator>", "<value>"}});
+
+// <condition_tail> -> BETWEEN <value> AND <value>
+grammar.push_back({"<condition_tail>", {"BETWEEN", "<value>", "AND", "<value>"}});
+
+// <condition_tail> -> LIKE <value>
+grammar.push_back({"<condition_tail>", {"LIKE", "<value>"}});
+
+// <condition_tail> -> IN "(" <value_list> ")"
+grammar.push_back({"<condition_tail>", {"IN", "(", "<value_list>", ")"}});
+
     // 31. <comp_operator> -> "="
     grammar.push_back({"<comp_operator>", {"="}});
     // 32. <comp_operator> -> ">"

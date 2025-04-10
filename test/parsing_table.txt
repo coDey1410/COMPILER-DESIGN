@@ -1,9 +1,10 @@
 === FIRST Sets ===
-<column_def> : { id }
-<column_def_list> : { id }
+<column_def> : { PRIMARY id }
+<column_def_list> : { PRIMARY id }
 <column_def_list_tail> : { , EPSILON }
 <comp_operator> : { < = > }
 <condition> : { id }
+<condition_tail> : { < = > BETWEEN IN LIKE }
 <create_table_stmt> : { CREATE }
 <datatype> : { id }
 <identifier> : { id }
@@ -26,13 +27,14 @@
 EPSILON : { EPSILON }
 
 === FOLLOW Sets ===
-<column_def> : { , }
-<column_def_list> : { , }
-<column_def_list_tail> : { , }
+<column_def> : { ) , }
+<column_def_list> : { ) }
+<column_def_list_tail> : { ) }
 <comp_operator> : { id num str }
 <condition> : { ; }
+<condition_tail> : { ; }
 <create_table_stmt> : { ; }
-<datatype> : { , }
+<datatype> : { ) , }
 <identifier> : { ( ) , ; < = > AND BETWEEN FROM IN LIKE VALUES WHERE id }
 <identifier_list> : { ) FROM }
 <identifier_list_tail> : { ) FROM }
@@ -52,18 +54,23 @@ EPSILON : { EPSILON }
 <where_clause> : { ; }
 
 === Parsing Table ===
+M[<column_def>, PRIMARY] = <column_def> -> PRIMARY KEY ( <identifier> ) 
 M[<column_def>, id] = <column_def> -> <identifier> <datatype> 
+M[<column_def_list>, PRIMARY] = <column_def_list> -> <column_def> <column_def_list_tail> 
 M[<column_def_list>, id] = <column_def_list> -> <column_def> <column_def_list_tail> 
+M[<column_def_list_tail>, )] = <column_def_list_tail> -> EPSILON 
 M[<column_def_list_tail>, ,] = <column_def_list_tail> -> , <column_def> <column_def_list_tail> 
-<column_def_list_tail> -> EPSILON 
 M[<comp_operator>, <] = <comp_operator> -> < 
 M[<comp_operator>, =] = <comp_operator> -> = 
 M[<comp_operator>, >] = <comp_operator> -> > 
-M[<condition>, id] = <condition> -> <identifier> <comp_operator> <value> 
-<condition> -> <identifier> BETWEEN <value> AND <value> 
-<condition> -> <identifier> LIKE <value> 
-<condition> -> <identifier> IN ( <value_list> ) 
-M[<create_table_stmt>, CREATE] = <create_table_stmt> -> CREATE TABLE <identifier> ( <column_def_list> , PRIMARY KEY ( <identifier> ) ) 
+M[<condition>, id] = <condition> -> <identifier> <condition_tail> 
+M[<condition_tail>, <] = <condition_tail> -> <comp_operator> <value> 
+M[<condition_tail>, =] = <condition_tail> -> <comp_operator> <value> 
+M[<condition_tail>, >] = <condition_tail> -> <comp_operator> <value> 
+M[<condition_tail>, BETWEEN] = <condition_tail> -> BETWEEN <value> AND <value> 
+M[<condition_tail>, IN] = <condition_tail> -> IN ( <value_list> ) 
+M[<condition_tail>, LIKE] = <condition_tail> -> LIKE <value> 
+M[<create_table_stmt>, CREATE] = <create_table_stmt> -> CREATE TABLE <identifier> ( <column_def_list> ) 
 M[<datatype>, id] = <datatype> -> <identifier> 
 M[<identifier>, id] = <identifier> -> id 
 M[<identifier_list>, id] = <identifier_list> -> <identifier> <identifier_list_tail> 

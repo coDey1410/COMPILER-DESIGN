@@ -1,18 +1,21 @@
 === Symbol Table ===
 
 --- Identifiers ---
+VARCHAR	(IDENTIFIER)
+INT	(IDENTIFIER)
+ID	(IDENTIFIER)
+Name	(IDENTIFIER)
 Students	(IDENTIFIER)
 
 --- Numbers ---
-2	(NUMBER)
 
 --- String Literals ---
-Bob	(STRING)
 
 --- Keywords ---
-INTO	(INTO)
-VALUES	(VALUES)
-INSERT	(INSERT)
+KEY	(KEY)
+PRIMARY	(PRIMARY)
+TABLE	(TABLE)
+CREATE	(CREATE)
 
 --- Symbols ---
 ;	(;)

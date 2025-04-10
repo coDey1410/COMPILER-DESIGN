@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "utils.h"
+#include "parse_tree.h" 
 using namespace std;
 
 int main() {
@@ -62,7 +63,6 @@ int main() {
     // Perform syntax analysis using the LL(1) parsing table.
     cout << "\n=== LL(1) Parsing (Using Parsing Table) ===" << endl;
     ll1Parse(tokens, grammar, parsingTable);
-    cout << "=============================================" << endl;
     
     return 0;
 }

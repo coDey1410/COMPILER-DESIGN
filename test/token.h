@@ -31,6 +31,7 @@ enum class TokenType {
     IDENTIFIER,
     NUMBER,
     STRING,
+    ERROR, 
     END
 };
 
